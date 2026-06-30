@@ -472,6 +472,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Function to share an activity via Web Share API or clipboard fallback
+  async function shareActivity(name, details) {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?activity=${encodeURIComponent(name)}`;
+    const shareText = `Check out "${name}" at Mergington High School!\n${details.description}\nSchedule: ${formatSchedule(details)}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: name, text: shareText, url: shareUrl });
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error("Error sharing:", error);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+        showMessage("Link copied to clipboard!", "success");
+      } catch (error) {
+        console.error("Error copying to clipboard:", error);
+        showMessage("Could not copy link. Please copy the URL manually.", "error");
+      }
+    }
+  }
+
   // Function to render a single activity card
   function renderActivityCard(name, details) {
     const activityCard = document.createElement("div");
@@ -553,6 +577,9 @@ document.addEventListener("DOMContentLoaded", () => {
         </ul>
       </div>
       <div class="activity-card-actions">
+        <button class="share-button" data-activity="${name}" aria-label="Share ${name}">
+          📤 Share
+        </button>
         ${
           currentUser
             ? `
@@ -575,6 +602,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const deleteButtons = activityCard.querySelectorAll(".delete-participant");
     deleteButtons.forEach((button) => {
       button.addEventListener("click", handleUnregister);
+    });
+
+    // Add click handler for share button
+    const shareButton = activityCard.querySelector(".share-button");
+    shareButton.addEventListener("click", () => {
+      shareActivity(name, details);
     });
 
     // Add click handler for register button (only when authenticated)
